@@ -1,58 +1,52 @@
-name: Auto Build & Release on Push
+name: Build EXE and Auto Release
 
-# 只要推送到任意分支（除了你不想触发的分支）就运行
-on:
-  push:
-    branches:
-      - master          # 也可以是 main，根据你的默认分支来改
-      # - develop       # 如果你想其他分支也触发，就加在这里
+on: [push]  # 每次推送都触发
 
-# 关键权限：允许创建 Release 和上传文件
 permissions:
-  contents: write
+  contents: write   # 必须添加，允许创建 Release
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+    - name: Install dependencies
+      run: pip install -r requirements.txt
 
-      - name: Install PyInstaller
-        run: pip install pyinstaller
+    - name: Install PyInstaller
+      run: pip install pyinstaller
 
-      # 👇 注意：把 your_main_script.py 换成你的主文件名
-      - name: Build EXE with PyInstaller
-        run: pyinstaller -F -w -i XYY.ico main.py
+    - name: Build with PyInstaller
+      run: pyinstaller -F -i XYY.ico main.py
 
-      # 生成一个动态版本号：格式为 “push-短commit哈希”
-      # 例如：push-a1b2c3d
-      - name: Generate dynamic tag name
-        id: vars
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "TAG_NAME=push-${SHORT_SHA}" >> $GITHUB_ENV
+    - name: Upload EXE as artifact (optional)
+      uses: actions/upload-artifact@v4
+      with:
+        name: WVP目录名称修改工具
+        path: dist/*.exe
 
-      # 创建 Release 并上传 exe
-      - name: Create Release and upload asset
-        uses: softprops/action-gh-release@v2
-        with:
-          # Release 的 tag 名称 – 每次 push 都不同
-          tag_name: ${{ env.TAG_NAME }}
-          # Release 的标题 – 可以写成你喜欢的格式
-          name: "Auto build for commit ${{ env.TAG_NAME }}"
-          # 是否标记为预发布（Pre-release）
-          prerelease: true
-          # 要上传的文件
-          files: dist/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # ========== 新增：生成动态 tag 名称 ==========
+    - name: Generate dynamic tag name
+      id: vars
+      shell: bash
+      run: |
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        echo "TAG_NAME=auto-build-${SHORT_SHA}" >> $GITHUB_ENV
+
+    # ========== 新增：自动创建 Release 并上传 exe ==========
+    - name: Create Release and upload asset
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.TAG_NAME }}
+        name: "Auto build for commit ${{ env.TAG_NAME }}"
+        prerelease: true                # 标记为预发布（可选）
+        files: dist/*.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
