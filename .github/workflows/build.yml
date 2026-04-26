@@ -1,29 +1,46 @@
-name: Build EXE
+name: Build and Release
 
-on: [push]  # 当你推送代码到GitHub时，这个工作流就会自动启动
+# 1️⃣ 触发条件：当推送的标签以 'v' 开头时触发[reference:1]
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 2️⃣ 权限设置：必须允许创建 Release[reference:2][reference:3]
+permissions:
+  contents: write
 
 jobs:
   build:
-    runs-on: windows-latest  # 打包环境
+    name: Build EXE and Create Release
+    runs-on: windows-latest  # 打包 Windows 程序
+
     steps:
-    - uses: actions/checkout@v4  # 第一步：拉取你的代码
+      # 1. 拉取代码
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python  # 第二步：安装Python环境
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
+      # 2. 设置 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-    - name: Install dependencies  # 第三步：安装你的项目依赖
-      run: pip install -r requirements.txt  # 确保你的仓库里有requirements.txt文件
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Install PyInstaller  # 第四步：安装打包工具
-      run: pip install pyinstaller
+      # 4. 安装 PyInstaller 并打包
+      - name: Install PyInstaller
+        run: pip install pyinstaller
 
-    - name: Build with PyInstaller  # 第五步：执行打包命令
-      run: pyinstaller -F -w -i XYY.ico main.py
+      # 👇 在此处，将 'your_main_script.py' 替换为你自己的 Python 主文件名
+      - name: Build with PyInstaller
+        run: pyinstaller -F -w -i XYY.ico main.py
 
-    - name: Upload EXE  # 第六步：上传打包好的文件
-      uses: actions/upload-artifact@v4
-      with:
-        name: WVP名称目录修改工具
-        path: dist/*.exe
+      # 5. 创建 GitHub Release 并上传 .exe 文件🎉
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          # 👇 指定要上传的文件路径，这里是上传 dist 文件夹下的所有 .exe 文件
+          files: dist/*.exe
