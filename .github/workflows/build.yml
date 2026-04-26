@@ -24,7 +24,7 @@ jobs:
       run: pip install pyinstaller
 
     - name: Build with PyInstaller
-      run: pyinstaller -F -i XYY.ico -n "WVP目录名称修改工具" main.py
+      run: pyinstaller -F -i -w XYY.ico -n "WVP目录名称修改工具" main.py
 
     - name: Upload EXE as artifact (optional)
       uses: actions/upload-artifact@v4
