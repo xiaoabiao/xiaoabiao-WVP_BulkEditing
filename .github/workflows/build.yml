@@ -1,46 +1,58 @@
-name: Build and Release
+name: Auto Build & Release on Push
 
-# 1️⃣ 触发条件：当推送的标签以 'v' 开头时触发[reference:1]
+# 只要推送到任意分支（除了你不想触发的分支）就运行
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master          # 也可以是 main，根据你的默认分支来改
+      # - develop       # 如果你想其他分支也触发，就加在这里
 
-# 2️⃣ 权限设置：必须允许创建 Release[reference:2][reference:3]
+# 关键权限：允许创建 Release 和上传文件
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build EXE and Create Release
-    runs-on: windows-latest  # 打包 Windows 程序
+  build-and-release:
+    runs-on: windows-latest
 
     steps:
-      # 1. 拉取代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 设置 Python 环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      # 3. 安装依赖
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 4. 安装 PyInstaller 并打包
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      # 👇 在此处，将 'your_main_script.py' 替换为你自己的 Python 主文件名
-      - name: Build with PyInstaller
+      # 👇 注意：把 your_main_script.py 换成你的主文件名
+      - name: Build EXE with PyInstaller
         run: pyinstaller -F -w -i XYY.ico main.py
 
-      # 5. 创建 GitHub Release 并上传 .exe 文件🎉
-      - name: Create Release and Upload Asset
+      # 生成一个动态版本号：格式为 “push-短commit哈希”
+      # 例如：push-a1b2c3d
+      - name: Generate dynamic tag name
+        id: vars
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "TAG_NAME=push-${SHORT_SHA}" >> $GITHUB_ENV
+
+      # 创建 Release 并上传 exe
+      - name: Create Release and upload asset
         uses: softprops/action-gh-release@v2
         with:
-          # 👇 指定要上传的文件路径，这里是上传 dist 文件夹下的所有 .exe 文件
+          # Release 的 tag 名称 – 每次 push 都不同
+          tag_name: ${{ env.TAG_NAME }}
+          # Release 的标题 – 可以写成你喜欢的格式
+          name: "Auto build for commit ${{ env.TAG_NAME }}"
+          # 是否标记为预发布（Pre-release）
+          prerelease: true
+          # 要上传的文件
           files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
