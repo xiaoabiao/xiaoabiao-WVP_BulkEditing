@@ -10,7 +10,7 @@ import hashlib
 import requests
 import threading
 
-DEFAULT_HOST = "http://21.1.2.246:18080"
+DEFAULT_HOST = "http://127.0.0.1:18080"
 DEFAULT_USERNAME = "admin"
 
 
